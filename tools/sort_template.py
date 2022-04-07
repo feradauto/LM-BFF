@@ -129,6 +129,9 @@ def main():
     with open(args.log) as f:
         result_list = []
         for line in f:
+            line=line.replace("device(type=\'cuda\', index=0)","\"cuda:0\"")
+            line=line.replace("<SchedulerType.LINEAR: \'linear\'>","\"linear\"")
+            line=line.replace("<IntervalStrategy.STEPS: \'steps\'>","\"steps\"")
             result_list.append(eval(line))
     
     seed_result = {}

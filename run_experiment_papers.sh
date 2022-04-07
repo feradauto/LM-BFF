@@ -23,6 +23,11 @@ EVAL_STEP=100
 # All those parameters are set arbitrarily by observing the data distributions.
 TASK_EXTRA=""
 case $TASK in
+    papers)
+        TEMPLATE=*cls**sent_0*._This_is_the_first_time_that_we_have_used_this_approach.*mask*_and*sep+*
+        MAPPING="{'0':'incorrect','1':'correct'}"
+        TASK_EXTRA="--max_seq_len 256 --num_sample 4"
+        ;;
     CoLA)
         TEMPLATE=*cls**sent_0*_This_is*mask*.*sep+*
         MAPPING="{'0':'incorrect','1':'correct'}"

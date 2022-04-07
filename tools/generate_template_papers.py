@@ -7,6 +7,7 @@ from tqdm import tqdm
 import json
 import argparse
 import pandas as pd
+import math
 
 def get_text(template, input_text_tuple, label, tokenizer, mapping):
     def enc(text):
@@ -24,7 +25,7 @@ def get_text(template, input_text_tuple, label, tokenizer, mapping):
                 continue
             new_tokens.append(special_token_mapping[part])
         elif part[:5] == 'label':
-            new_tokens += enc(' ' + mapping[label])
+            new_tokens += enc(' ' + label)
         elif part[:5] == 'sent_':
             sent_id = int(part.split('_')[1])
             new_tokens += enc(input_text_tuple[sent_id])
@@ -90,12 +91,14 @@ def generate(dataset, template, model, tokenizer, target_number, mapping, beam, 
     # Process the inputs
     for item in dataset:
         if label is None or item['label'] == label:
+            if type(item['label'])==float and math.isnan(item['label']):
+                item['label']=''
             input_text = get_text(template, item['text'], item['label'], tokenizer, mapping)
             if truncate is not None:
                 if truncate == 'head':
-                    input_text = input_text[-256:]
+                    input_text = input_text[-500:]
                 elif truncate == 'tail':
-                    input_text = input_text[:256]
+                    input_text = input_text[:500]
                 else:
                     raise NotImplementedError
             input_ids = torch.tensor(input_text).long()
@@ -286,7 +289,7 @@ def search_template(model, tokenizer, task_name, k, seed, beam, output_dir, data
         'RTE': {'not_entailment':'No','entailment':'Yes'}
     }
 
-    mapping = map_of_mapping[task_name]
+    mapping = {}# map_of_mapping[task_name]
     print('|', 'mapping')
     print('|', mapping)
 
@@ -294,11 +297,11 @@ def search_template(model, tokenizer, task_name, k, seed, beam, output_dir, data
     os.makedirs(os.path.join(output_dir, task_name), exist_ok=True)
     f = open(os.path.join(output_dir, task_name, "{}-{}.txt".format(k, seed)), 'w')
 
-    if task_name in ['SST-2', 'sst-5', 'mr', 'cr', 'subj', 'trec', 'CoLA', 'mpqa']:
+    if task_name in ['SST-2', 'sst-5', 'mr', 'cr', 'subj', 'trec', 'CoLA', 'mpqa','papers','paper_method','paper_task']:
         # Single sentence tasks
         # We take two kinds of templates: put [MASK] at the beginning or the end
         template = "*cls**sentu_0**<extra_id_0>**label**<extra_id_1>**sep+*"
-        generate_text = generate(dataset, template, model, tokenizer, target_number=2, mapping=mapping, beam=beam, label=None, truncate='head')[:beam//2]
+        generate_text = generate(dataset, template, model, tokenizer, target_number=2, mapping=mapping, beam=beam, label=None, truncate='tail')[:beam//2]
 
         print("####### generated templates #######")
         for text in generate_text:

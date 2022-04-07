@@ -257,9 +257,15 @@ class DynamicTrainingArguments(TrainingArguments):
         default=False,
         metadata={"help": "No test"}
     )
+    evaluate_during_training: bool = field(
+        default=False,
+        metadata={"help": "evaluate_during_training"}
+    )   
 
 
 def main():
+    import os
+    os.environ["WANDB_DISABLED"] = "true"
     parser = HfArgumentParser((ModelArguments, DynamicDataTrainingArguments, DynamicTrainingArguments))
 
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -533,7 +539,7 @@ def main():
         if training_args.save_at_last:
             trainer.save_model(training_args.output_dir)
  
-        if trainer.is_world_master():
+        if trainer.is_world_process_zero():
             tokenizer.save_pretrained(training_args.output_dir)
             torch.save(model_args, os.path.join(training_args.output_dir, "model_args.bin"))
             torch.save(data_args, os.path.join(training_args.output_dir, "data_args.bin"))
@@ -570,7 +576,7 @@ def main():
             output_eval_file = os.path.join(
                 training_args.output_dir, f"eval_results_{eval_dataset.args.task_name}.txt"
             )
-            if trainer.is_world_master():
+            if trainer.is_world_process_zero():
                 with open(output_eval_file, "w") as writer:
                     logger.info("***** Eval results {} *****".format(eval_dataset.args.task_name))
                     for key, value in eval_result.items():
@@ -597,7 +603,7 @@ def main():
             output_test_file = os.path.join(
                 training_args.output_dir, f"test_results_{test_dataset.args.task_name}.txt"
             )
-            if trainer.is_world_master():
+            if trainer.is_world_process_zero():
                 with open(output_test_file, "w") as writer:
                     logger.info("***** Test results {} *****".format(test_dataset.args.task_name))
                     for key, value in test_result.items():
